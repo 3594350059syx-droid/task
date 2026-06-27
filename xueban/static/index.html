@@ -15,6 +15,57 @@
       justify-content: center;
       align-items: center;
       padding: 20px;
+      transition: background 0.3s ease;
+    }
+    body[data-theme="light"] {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    body[data-theme="light"] .app {
+      background: #f8fafc;
+      border-color: #dbe4ee;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+    }
+    body[data-theme="light"] header,
+    body[data-theme="light"] .tabs,
+    body[data-theme="light"] .input-area {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: #e2e8f0;
+    }
+    body[data-theme="light"] header h1,
+    body[data-theme="light"] .tab,
+    body[data-theme="light"] .kb-toggle,
+    body[data-theme="light"] .card h3 {
+      color: #0f172a;
+    }
+    body[data-theme="light"] .tab {
+      background: #f8fafc;
+      border-color: #dbe4ee;
+    }
+    body[data-theme="light"] .tab.active {
+      background: #3776AB;
+      color: #fff;
+      border-color: #3776AB;
+    }
+    body[data-theme="light"] .bubble {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    body[data-theme="light"] .msg.user .bubble {
+      background: #3776AB;
+      color: #fff;
+    }
+    body[data-theme="light"] .input-area textarea {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+    body[data-theme="light"] .card {
+      background: #fff;
+      border-color: #e2e8f0;
+    }
+    body[data-theme="light"] .card p {
+      color: #64748b;
     }
     .app {
       width: 100%;
@@ -244,9 +295,53 @@
       word-wrap: break-word;
       transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
+    .bubble > :first-child { margin-top: 0; }
+    .bubble > :last-child { margin-bottom: 0; }
+    .bubble h1, .bubble h2, .bubble h3, .bubble h4, .bubble h5, .bubble h6 {
+      margin: 10px 0 8px;
+      line-height: 1.3;
+      color: inherit;
+    }
+    .bubble p { margin: 0 0 8px; }
+    .bubble ul, .bubble ol {
+      margin: 8px 0 8px 18px;
+      padding-left: 18px;
+    }
+    .bubble li { margin: 4px 0; }
+    .bubble strong { font-weight: 700; }
+    .bubble code {
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.14);
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 0.92em;
+    }
+    .bubble pre {
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #0f172a;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+    }
+    .bubble pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 0.92em;
+      white-space: pre;
+    }
     .msg.user .bubble {
       background: #3776AB;
       color: #fff; }
+    .msg.user .bubble code {
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .msg.user .bubble pre {
+      background: #e8f1f7;
+      border-color: #cfe2f3;
+    }
     .typing {
       color: #94a3b8;
       font-style: normal;
@@ -429,6 +524,7 @@
     <header>
       <h1>📚 学伴 - python程序设计智能学习助手</h1>
       <div class="actions">
+        <button id="themeToggleBtn" onclick="toggleTheme()">🌙 深色模式</button>
         <button onclick="toggleView()">知识卡片</button>
         <button onclick="exportChat()">导出对话</button>
         <button onclick="clearChat()">清空对话</button>
@@ -517,6 +613,26 @@
   <script>
     let currentMode = "explain";
     let messages = [];
+    const THEME_KEY = "study-assistant-theme";
+
+    function applyTheme(theme) {
+      document.body.setAttribute("data-theme", theme);
+      const btn = document.getElementById("themeToggleBtn");
+      if (btn) {
+        btn.textContent = theme === "light" ? "☀️ 浅色模式" : "🌙 深色模式";
+      }
+    }
+
+    function toggleTheme() {
+      const nextTheme = document.body.getAttribute("data-theme") === "light" ? "dark" : "light";
+      localStorage.setItem(THEME_KEY, nextTheme);
+      applyTheme(nextTheme);
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
+      applyTheme(savedTheme);
+    }
 
     function updateTabIndicator(activeTab) {
       const tabsEl = document.getElementById("tabs");
@@ -556,6 +672,8 @@
       });
     });
 
+    initTheme();
+
     tabsEl.addEventListener("scroll", () => {
       updateTabIndicator(document.querySelector(".tab.active"));
     });
@@ -563,6 +681,91 @@
       updateTabIndicator(document.querySelector(".tab.active"));
     });
     updateTabIndicator(document.querySelector(".tab.active"));
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function renderInlineMarkdown(text) {
+      let html = escapeHtml(text);
+      html = html.replace(/`([^`]+)`/g, (_, code) => `<code>${escapeHtml(code)}</code>`);
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      return html;
+    }
+
+    function renderMarkdownToHtml(markdown) {
+      const lines = String(markdown || "").replace(/\r\n/g, "\n").split("\n");
+      const htmlParts = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          i += 1;
+          continue;
+        }
+
+        if (/^```/.test(trimmed)) {
+          const lang = trimmed.slice(3).trim();
+          const codeLines = [];
+          i += 1;
+          while (i < lines.length && !/^```/.test(lines[i].trim())) {
+            codeLines.push(lines[i]);
+            i += 1;
+          }
+          if (i < lines.length) i += 1;
+          const codeContent = codeLines.join("\n");
+          htmlParts.push(`<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(codeContent)}</code></pre>`);
+          continue;
+        }
+
+        if (/^#{1,6}\s+/.test(trimmed)) {
+          const level = trimmed.match(/^#+/)[0].length;
+          const content = trimmed.replace(/^#{1,6}\s+/, "");
+          htmlParts.push(`<h${level}>${renderInlineMarkdown(content)}</h${level}>`);
+          i += 1;
+          continue;
+        }
+
+        if (/^([-*+]\s+)(.+)/.test(trimmed)) {
+          const items = [];
+          while (i < lines.length && /^([-*+]\s+)(.+)/.test(lines[i].trim())) {
+            items.push(lines[i].trim().replace(/^[-*+]\s+/, ""));
+            i += 1;
+          }
+          htmlParts.push(`<ul>${items.map(item => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+          continue;
+        }
+
+        if (/^\d+\.\s+/.test(trimmed)) {
+          const items = [];
+          while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+            items.push(lines[i].trim().replace(/^\d+\.\s+/, ""));
+            i += 1;
+          }
+          htmlParts.push(`<ol>${items.map(item => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ol>`);
+          continue;
+        }
+
+        const paragraphLines = [];
+        while (i < lines.length && lines[i].trim() && !/^```/.test(lines[i].trim()) && !/^#{1,6}\s+/.test(lines[i].trim()) && !/^([-*+]\s+)(.+)/.test(lines[i].trim()) && !/^\d+\.\s+/.test(lines[i].trim())) {
+          paragraphLines.push(lines[i].trim());
+          i += 1;
+        }
+        const paragraph = paragraphLines.join("<br>");
+        htmlParts.push(`<p>${renderInlineMarkdown(paragraph)}</p>`);
+      }
+
+      return htmlParts.join("");
+    }
 
     // 发送消息（SSE 流式接收）
     async function sendMessage() {
@@ -598,7 +801,7 @@
         }
 
         bubble.classList.remove("typing");
-        bubble.textContent = "";
+        bubble.innerHTML = "";
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -624,7 +827,7 @@
             if (data.error) throw new Error(data.error);
             if (data.content) {
               reply += data.content;
-              bubble.textContent = reply;
+              bubble.innerHTML = renderMarkdownToHtml(reply);
               list.scrollTop = list.scrollHeight;
             }
           }
@@ -633,11 +836,11 @@
         if (reply) {
           messages.push({ role: "assistant", content: reply });
         } else if (!bubble.textContent) {
-          bubble.textContent = "（未收到回复）";
+          bubble.innerHTML = "（未收到回复）";
         }
       } catch (err) {
         bubble.classList.remove("typing");
-        bubble.textContent = "❌ 网络错误：" + err.message;
+        bubble.innerHTML = "❌ 网络错误：" + escapeHtml(err.message);
       } finally {
         sendBtn.disabled = false;
       }
@@ -652,7 +855,7 @@
       div.innerHTML =
         '<div class="avatar">' + (role === "user" ? "我" : "AI") + '</div>' +
         '<div class="bubble ' + (isTyping ? "typing" : "") + '"></div>';
-      div.querySelector(".bubble").textContent = content;
+      div.querySelector(".bubble").innerHTML = role === "user" ? escapeHtml(content) : escapeHtml(content);
       list.appendChild(div);
       list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
       return id;
