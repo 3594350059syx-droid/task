@@ -446,6 +446,74 @@
     }
     .cards.show { display: grid; }
     .messages.hide { display: none; }
+    .stats-panel {
+      display: none;
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      color: #e2e8f0;
+    }
+    .stats-panel.show { display: block; }
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+    .stats-header h2 {
+      font-size: 18px;
+      color: inherit;
+    }
+    .stats-header p {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-card, .chart-card {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    .stat-card .label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+    .stat-card .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .stats-charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .chart-card canvas {
+      width: 100% !important;
+      height: 220px !important;
+    }
+    .chart-card h3 {
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .chart-fallback {
+      color: #94a3b8;
+      font-size: 13px;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
     .card {
       border: 1px solid #eee;
       border-radius: 12px;
@@ -537,13 +605,43 @@
       <div class="tab" data-mode="solve">✏️ 习题解答</div>
       <div class="tab" data-mode="plan">📅 复习计划</div>
       <div class="tab" data-mode="review">🔍 错题分析</div>
-       <div class="tab" data-mode="memory">🧠 概念速记陪练</div>
+      <div class="tab" data-mode="memory">🧠 概念速记陪练</div>
+      <div class="tab" data-mode="stats">📈 统计</div>
     </div>
 
     <div class="messages" id="messages">
       <div class="msg">
         <div class="avatar">AI</div>
         <div class="bubble">你好！我是你的python程序设计学习伙伴"学伴"。请选择上方功能模式，告诉我你想学什么吧～</div>
+      </div>
+    </div>
+
+    <div class="stats-panel" id="statsPanel">
+      <div class="stats-header">
+        <div>
+          <h2>📊 使用统计</h2>
+          <p>查看今日请求与 Token 使用情况</p>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">今日请求数</div>
+          <div class="value" id="todayRequests">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">今日 Token 总量</div>
+          <div class="value" id="todayTokens">0</div>
+        </div>
+      </div>
+      <div class="stats-charts">
+        <div class="chart-card">
+          <h3>按模式分布</h3>
+          <canvas id="modeChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>按天分布</h3>
+          <canvas id="dailyChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -610,10 +708,144 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     let currentMode = "explain";
     let messages = [];
     const THEME_KEY = "study-assistant-theme";
+    const STATS_KEY = "study-assistant-stats";
+    let modeChart = null;
+    let dailyChart = null;
+    let stats = loadStats();
+
+    function loadStats() {
+      try {
+        const saved = localStorage.getItem(STATS_KEY);
+        if (!saved) {
+          return {
+            byMode: { explain: 0, solve: 0, plan: 0, review: 0, memory: 0 },
+            byDay: {}
+          };
+        }
+        return JSON.parse(saved);
+      } catch (err) {
+        return {
+          byMode: { explain: 0, solve: 0, plan: 0, review: 0, memory: 0 },
+          byDay: {}
+        };
+      }
+    }
+
+    function getTodayKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function estimateTokens(text) {
+      return Math.max(1, Math.ceil(String(text || "").length / 4));
+    }
+
+    function updateStats(mode, promptText, replyText) {
+      const todayKey = getTodayKey();
+      const tokenCount = estimateTokens(promptText) + estimateTokens(replyText);
+      stats.byMode = stats.byMode || { explain: 0, solve: 0, plan: 0, review: 0, memory: 0 };
+      stats.byMode[mode] = (stats.byMode[mode] || 0) + 1;
+      stats.byDay = stats.byDay || {};
+      if (!stats.byDay[todayKey]) {
+        stats.byDay[todayKey] = { requests: 0, tokens: 0 };
+      }
+      stats.byDay[todayKey].requests += 1;
+      stats.byDay[todayKey].tokens += tokenCount;
+      localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+      renderStats();
+    }
+
+    function renderStats() {
+      const todayKey = getTodayKey();
+      const todayData = stats.byDay?.[todayKey] || { requests: 0, tokens: 0 };
+      document.getElementById("todayRequests").textContent = todayData.requests;
+      document.getElementById("todayTokens").textContent = todayData.tokens;
+
+      const modeLabels = ["讲解", "解题", "计划", "错题", "速记"];
+      const modeValues = [
+        stats.byMode?.explain || 0,
+        stats.byMode?.solve || 0,
+        stats.byMode?.plan || 0,
+        stats.byMode?.review || 0,
+        stats.byMode?.memory || 0,
+      ];
+
+      const days = Object.keys(stats.byDay || {}).sort();
+      const recentDays = days.slice(-7);
+      const dailyLabels = recentDays.map(day => day.slice(5));
+      const dailyValues = recentDays.map(day => stats.byDay[day].requests || 0);
+
+      renderModeChart(modeLabels, modeValues);
+      renderDailyChart(dailyLabels, dailyValues);
+    }
+
+    function renderModeChart(labels, values) {
+      const canvas = document.getElementById("modeChart");
+      if (!canvas) return;
+      if (typeof Chart === "undefined") {
+        canvas.outerHTML = '<div class="chart-fallback">图表组件未加载，当前仅展示统计摘要。</div>';
+        return;
+      }
+      if (modeChart) {
+        modeChart.destroy();
+      }
+      modeChart = new Chart(canvas.getContext("2d"), {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ["#3776AB", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" }
+          }
+        }
+      });
+    }
+
+    function renderDailyChart(labels, values) {
+      const canvas = document.getElementById("dailyChart");
+      if (!canvas) return;
+      if (typeof Chart === "undefined") {
+        canvas.outerHTML = '<div class="chart-fallback">图表组件未加载，当前仅展示统计摘要。</div>';
+        return;
+      }
+      if (dailyChart) {
+        dailyChart.destroy();
+      }
+      dailyChart = new Chart(canvas.getContext("2d"), {
+        type: "line",
+        data: {
+          labels: labels.length ? labels : ["暂无数据"],
+          datasets: [{
+            label: "请求数",
+            data: values.length ? values : [0],
+            borderColor: "#3776AB",
+            backgroundColor: "rgba(55, 118, 171, 0.2)",
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
 
     function applyTheme(theme) {
       document.body.setAttribute("data-theme", theme);
@@ -658,21 +890,33 @@
       }
     }
 
-    // 模式切换
     const tabsEl = document.getElementById("tabs");
     document.querySelectorAll(".tab").forEach(tab => {
       tab.addEventListener("click", () => {
-        if (tab.classList.contains("active")) return;
+        const isStatsTab = tab.dataset.mode === "stats";
+        if (tab.classList.contains("active") && !isStatsTab) return;
 
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
-        currentMode = tab.dataset.mode;
-        updateTabIndicator(tab);
-        playTabSwitchAnimation(tab);
+
+        if (isStatsTab) {
+          document.getElementById("messages").classList.add("hide");
+          document.getElementById("cards").classList.remove("show");
+          document.getElementById("statsPanel").classList.add("show");
+          renderStats();
+        } else {
+          currentMode = tab.dataset.mode;
+          document.getElementById("messages").classList.remove("hide");
+          document.getElementById("cards").classList.remove("show");
+          document.getElementById("statsPanel").classList.remove("show");
+          updateTabIndicator(tab);
+          playTabSwitchAnimation(tab);
+        }
       });
     });
 
     initTheme();
+    renderStats();
 
     tabsEl.addEventListener("scroll", () => {
       updateTabIndicator(document.querySelector(".tab.active"));
@@ -835,6 +1079,7 @@
 
         if (reply) {
           messages.push({ role: "assistant", content: reply });
+          updateStats(currentMode, text, reply);
         } else if (!bubble.textContent) {
           bubble.innerHTML = "（未收到回复）";
         }
@@ -862,8 +1107,13 @@
     }
 
     function toggleView() {
-      document.getElementById("messages").classList.toggle("hide");
-      document.getElementById("cards").classList.toggle("show");
+      const messagesEl = document.getElementById("messages");
+      const cardsEl = document.getElementById("cards");
+      const statsEl = document.getElementById("statsPanel");
+      const shouldShowCards = !cardsEl.classList.contains("show");
+      cardsEl.classList.toggle("show", shouldShowCards);
+      messagesEl.classList.toggle("hide", shouldShowCards);
+      statsEl.classList.remove("show");
     }
 
     function exportChat() {
