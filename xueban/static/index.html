@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>学伴 - 智能学习助手</title>
+  <title>学伴 - python程序设计智能学习助手</title>
   <style>
     /* ========== 基础样式（学生可自由美化）========== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
       min-height: 100vh;
       display: flex;
       justify-content: center;
@@ -20,54 +20,65 @@
       width: 100%;
       max-width: 900px;
       height: 90vh;
-      background: #fff;
+      background: #0f172a;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+
+      /* 原阴影 + Python蓝色高光（重点） */
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.2),
+        0 0 40px rgba(55, 118, 171, 0.3);
+
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      border: 1px solid #1e293b;
     }
     header {
       padding: 16px 24px;
-      background: #f7f8fc;
-      border-bottom: 1px solid #eee;
+      background: #020617;
+      color: #e2e8f0;
+      border-bottom: 1px solid #1e293b;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    header h1 { font-size: 20px; color: #333; }
+    header h1 { font-size: 20px; color: #e2e8f0; }
     .actions button {
       padding: 6px 14px;
       margin-left: 8px;
-      border: 1px solid #667eea;
-      background: #fff;
-      color: #667eea;
+      border: 1px solid #3776AB;
+      background: #FFD43B;
+      color: #000;
       border-radius: 6px;
       cursor: pointer;
       font-size: 13px;
     }
-    .actions button:hover { background: #667eea; color: #fff; }
+    .actions button:hover { background: #FFD43B;
+  color: #000;
+  border-color: #FFD43B; }
     .tabs {
       display: flex;
       padding: 12px 24px;
       gap: 8px;
-      background: #fafbff;
+      background: #020617;
       border-bottom: 1px solid #eee;
       overflow-x: auto;
+      color: #cbd5e1;
     }
     .tab {
       padding: 8px 16px;
       border: 1px solid #ddd;
       border-radius: 20px;
-      background: #fff;
+      background: #020617;
       cursor: pointer;
       font-size: 13px;
       white-space: nowrap;
+      color: #cbd5e1;
     }
     .tab.active {
-      background: #667eea;
+      background: #3776AB;
       color: #fff;
-      border-color: #667eea;
+      border-color: #3776AB;
     }
     .messages {
       flex: 1;
@@ -84,7 +95,7 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #667eea;
+      background:#3776AB;
       color: #fff;
       display: flex;
       align-items: center;
@@ -97,34 +108,39 @@
       max-width: 70%;
       padding: 12px 16px;
       border-radius: 12px;
-      background: #f1f3f8;
+      background:  #1e293b;
+      color: #e2e8f0;
       line-height: 1.6;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
-    .msg.user .bubble { background: #667eea; color: #fff; }
+    .msg.user .bubble {
+      background: #3776AB;
+      color: #fff; }
     .typing { color: #999; font-style: italic; }
     .input-area {
       padding: 16px 24px;
-      border-top: 1px solid #eee;
-      background: #fafbff;
+      border-top: 1px solid #1e293b;
+      background: #020617;
       display: flex;
       gap: 12px;
     }
     .input-area textarea {
       flex: 1;
       padding: 12px;
-      border: 1px solid #ddd;
+      background: #0f172a;
+      color: #e2e8f0;
+      border: 1px solid #1e293b;
       border-radius: 8px;
       resize: none;
       font-family: inherit;
       font-size: 14px;
       outline: none;
     }
-    .input-area textarea:focus { border-color: #667eea; }
+    .input-area textarea:focus { border-color:#3776AB; }
     .input-area button {
       padding: 0 24px;
-      background: #667eea;
+      background: #3776AB;
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -165,7 +181,7 @@
 <body>
   <div class="app">
     <header>
-      <h1>📚 学伴 - 智能学习助手</h1>
+      <h1>📚 学伴 - python程序设计智能学习助手</h1>
       <div class="actions">
         <button onclick="toggleView()">知识卡片</button>
         <button onclick="exportChat()">导出对话</button>
@@ -183,7 +199,7 @@
     <div class="messages" id="messages">
       <div class="msg">
         <div class="avatar">AI</div>
-        <div class="bubble">你好！我是你的学习伙伴"学伴"。请选择上方功能模式，告诉我你想学什么吧～</div>
+        <div class="bubble">你好！我是你的python程序设计学习伙伴"学伴"。请选择上方功能模式，告诉我你想学什么吧～</div>
       </div>
     </div>
 
