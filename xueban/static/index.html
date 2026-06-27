@@ -53,17 +53,52 @@
       cursor: pointer;
       font-size: 13px;
     }
-    .actions button:hover { background: #FFD43B;
-  color: #000;
-  border-color: #FFD43B; }
+    .actions button,
+    .input-area button {
+      transition:
+        color 0.28s ease,
+        background-color 0.28s ease,
+        border-color 0.28s ease,
+        box-shadow 0.28s ease,
+        transform 0.28s ease;
+    }
+    .actions button:hover,
+    .input-area button:hover:not(:disabled) {
+      box-shadow: 0 4px 16px rgba(255, 212, 59, 0.45), 0 0 12px rgba(255, 212, 59, 0.6);
+      transform: translateY(-2px);
+    }
+    .actions button:hover {
+      background: #ffe066;
+      color: #000;
+      border-color: #ffe066;
+    }
+    .input-area button:hover:not(:disabled) {
+      background: #4086b8;
+      box-shadow: 0 4px 16px rgba(55, 118, 171, 0.35), 0 0 14px rgba(55, 118, 171, 0.55);
+    }
     .tabs {
       display: flex;
-      padding: 12px 24px;
+      position: relative;
+      padding: 12px 24px 10px;
       gap: 8px;
       background: #020617;
       border-bottom: 1px solid #eee;
       overflow-x: auto;
       color: #cbd5e1;
+    }
+    .tab-indicator {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      background: #3776AB;
+      box-shadow: 0 0 10px rgba(55, 118, 171, 0.7);
+      pointer-events: none;
+      z-index: 2;
+      transition:
+        left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .tab {
       padding: 8px 16px;
@@ -74,23 +109,116 @@
       font-size: 13px;
       white-space: nowrap;
       color: #cbd5e1;
+      position: relative;
+      z-index: 1;
+      transition:
+        color 0.28s ease,
+        background-color 0.28s ease,
+        border-color 0.28s ease,
+        box-shadow 0.28s ease,
+        transform 0.28s ease,
+        opacity 0.28s ease;
+    }
+    .tab:hover {
+      color: #fff;
+      border-color: #3776AB;
+      box-shadow: 0 4px 14px rgba(55, 118, 171, 0.25), 0 0 10px rgba(55, 118, 171, 0.4);
+      transform: translateY(-2px);
     }
     .tab.active {
       background: #3776AB;
       color: #fff;
       border-color: #3776AB;
+      box-shadow: 0 4px 16px rgba(55, 118, 171, 0.3), 0 0 12px rgba(55, 118, 171, 0.6);
+    }
+    .tab.tab-switching {
+      animation: tabSwitchPulse 0.35s ease both;
+    }
+    @keyframes tabSwitchPulse {
+      from {
+        opacity: 0.72;
+        transform: scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    @keyframes tabPanelIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .messages.tab-panel-animate {
+      animation: tabPanelIn 0.35s ease both;
     }
     .messages {
       flex: 1;
       padding: 24px;
       overflow-y: auto;
     }
+    @keyframes msgUserIn {
+      from {
+        opacity: 0;
+        transform: translateX(14px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+    @keyframes msgAssistantIn {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes msgContentReveal {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+        filter: blur(2px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+      }
+    }
+    @keyframes chatgptTypingDot {
+      0%, 80%, 100% {
+        opacity: 0.25;
+        transform: translateY(0);
+      }
+      40% {
+        opacity: 1;
+        transform: translateY(-4px);
+      }
+    }
     .msg {
       margin-bottom: 16px;
       display: flex;
       gap: 12px;
     }
-    .msg.user { flex-direction: row-reverse; }
+    .msg.user {
+      flex-direction: row-reverse;
+      animation: msgUserIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .msg:not(.user) {
+      animation: msgAssistantIn 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .msg:not(.user) .bubble {
+      animation: msgContentReveal 0.48s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+    }
     .avatar {
       width: 36px;
       height: 36px;
@@ -102,6 +230,7 @@
       justify-content: center;
       font-size: 13px;
       flex-shrink: 0;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
     .msg.user .avatar { background: #4caf50; }
     .bubble {
@@ -113,11 +242,31 @@
       line-height: 1.6;
       white-space: pre-wrap;
       word-wrap: break-word;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
     .msg.user .bubble {
       background: #3776AB;
       color: #fff; }
-    .typing { color: #999; font-style: italic; }
+    .typing {
+      color: #94a3b8;
+      font-style: normal;
+      min-height: 1.6em;
+    }
+    .typing::after {
+      content: "";
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      margin-left: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 10px 0 0 currentColor, 20px 0 0 currentColor;
+      animation: chatgptTypingDot 1.4s infinite ease-in-out both;
+      vertical-align: middle;
+    }
+    .bubble.msg-content-reveal {
+      animation: msgContentReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
     .input-area {
       padding: 16px 24px;
       border-top: 1px solid #1e293b;
@@ -125,9 +274,13 @@
       display: flex;
       gap: 12px;
     }
-    .input-area textarea {
+    .input-wrap {
       flex: 1;
-      padding: 12px;
+      position: relative;
+    }
+    .input-area textarea {
+      width: 100%;
+      padding: 12px 12px 28px;
       background: #0f172a;
       color: #e2e8f0;
       border: 1px solid #1e293b;
@@ -136,8 +289,27 @@
       font-family: inherit;
       font-size: 14px;
       outline: none;
+      transition:
+        border-color 0.28s ease,
+        box-shadow 0.28s ease,
+        background-color 0.28s ease;
     }
-    .input-area textarea:focus { border-color:#3776AB; }
+    .char-count {
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      font-size: 11px;
+      color: #64748b;
+      pointer-events: none;
+      transition: color 0.2s ease;
+    }
+    .char-count.over-limit {
+      color: #ef4444;
+    }
+    .input-area textarea:focus {
+      border-color: #3776AB;
+      box-shadow: 0 4px 14px rgba(55, 118, 171, 0.2), 0 0 10px rgba(55, 118, 171, 0.5);
+    }
     .input-area button {
       padding: 0 24px;
       background: #3776AB;
@@ -162,16 +334,69 @@
       border: 1px solid #eee;
       border-radius: 12px;
       overflow: hidden;
+      transition:
+        border-color 0.28s ease,
+        box-shadow 0.28s ease,
+        transform 0.28s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #3776AB;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18), 0 0 18px rgba(55, 118, 171, 0.22);
     }
     .card img {
       width: 100%;
       height: 160px;
       object-fit: cover;
       background: #f1f3f8;
+      transition: transform 0.28s ease;
     }
     .card .info { padding: 12px; }
-    .card h3 { font-size: 14px; margin-bottom: 4px; }
+    .card h3 {
+      font-size: 14px;
+      margin-bottom: 4px;
+      transition: color 0.28s ease;
+    }
     .card p { font-size: 12px; color: #666; }
+
+    /* Hover 微交互 */
+    .actions button:active,
+    .input-area button:active:not(:disabled) {
+      transform: translateY(0) scale(0.97);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+    .tab:active {
+      transform: translateY(0) scale(0.97);
+    }
+    .tab.active:hover {
+      background: #3d82b8;
+      box-shadow: 0 6px 18px rgba(55, 118, 171, 0.35), 0 0 14px rgba(55, 118, 171, 0.65);
+    }
+    .msg:hover .avatar {
+      transform: translateY(-1px) scale(1.06);
+      box-shadow: 0 4px 10px rgba(55, 118, 171, 0.35);
+    }
+    .msg.user:hover .avatar {
+      box-shadow: 0 4px 10px rgba(76, 175, 80, 0.35);
+    }
+    .msg:hover .bubble {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+    .msg.user:hover .bubble {
+      box-shadow: 0 4px 12px rgba(55, 118, 171, 0.35);
+    }
+    .input-area textarea:hover:not(:focus) {
+      border-color: #334155;
+      background-color: #111827;
+    }
+    .card:hover img {
+      transform: scale(1.03);
+    }
+    .card:hover h3 {
+      color: #3776AB;
+    }
+
     @media (max-width: 600px) {
       .app { height: 100vh; border-radius: 0; }
       .bubble { max-width: 85%; }
@@ -185,10 +410,12 @@
       <div class="actions">
         <button onclick="toggleView()">知识卡片</button>
         <button onclick="exportChat()">导出对话</button>
+        <button onclick="clearChat()">清空对话</button>
       </div>
     </header>
 
-    <div class="tabs">
+    <div class="tabs" id="tabs">
+      <div class="tab-indicator" id="tabIndicator" aria-hidden="true"></div>
       <div class="tab active" data-mode="explain">📖 知识讲解</div>
       <div class="tab" data-mode="solve">✏️ 习题解答</div>
       <div class="tab" data-mode="plan">📅 复习计划</div>
@@ -252,7 +479,10 @@
     </div>
 
     <div class="input-area">
-      <textarea id="input" rows="2" placeholder="输入问题，按 Enter 发送..."></textarea>
+      <div class="input-wrap">
+        <textarea id="input" rows="2" placeholder="输入问题，按 Enter 发送..."></textarea>
+        <span class="char-count" id="charCount">0</span>
+      </div>
       <button id="sendBtn" onclick="sendMessage()">发送</button>
     </div>
   </div>
@@ -261,14 +491,51 @@
     let currentMode = "explain";
     let messages = [];
 
+    function updateTabIndicator(activeTab) {
+      const tabsEl = document.getElementById("tabs");
+      const indicator = document.getElementById("tabIndicator");
+      if (!tabsEl || !indicator || !activeTab) return;
+
+      const tabsRect = tabsEl.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      indicator.style.left = (tabRect.left - tabsRect.left + tabsEl.scrollLeft) + "px";
+      indicator.style.width = tabRect.width + "px";
+    }
+
+    function playTabSwitchAnimation(activeTab) {
+      activeTab.classList.remove("tab-switching");
+      void activeTab.offsetWidth;
+      activeTab.classList.add("tab-switching");
+
+      const messagesEl = document.getElementById("messages");
+      if (messagesEl && !messagesEl.classList.contains("hide")) {
+        messagesEl.classList.remove("tab-panel-animate");
+        void messagesEl.offsetWidth;
+        messagesEl.classList.add("tab-panel-animate");
+      }
+    }
+
     // 模式切换
+    const tabsEl = document.getElementById("tabs");
     document.querySelectorAll(".tab").forEach(tab => {
       tab.addEventListener("click", () => {
+        if (tab.classList.contains("active")) return;
+
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         currentMode = tab.dataset.mode;
+        updateTabIndicator(tab);
+        playTabSwitchAnimation(tab);
       });
     });
+
+    tabsEl.addEventListener("scroll", () => {
+      updateTabIndicator(document.querySelector(".tab.active"));
+    });
+    window.addEventListener("resize", () => {
+      updateTabIndicator(document.querySelector(".tab.active"));
+    });
+    updateTabIndicator(document.querySelector(".tab.active"));
 
     // 发送消息
     async function sendMessage() {
@@ -279,10 +546,11 @@
       addMessage("user", text);
       messages.push({ role: "user", content: text });
       input.value = "";
+      updateCharCount();
 
       const sendBtn = document.getElementById("sendBtn");
       sendBtn.disabled = true;
-      const typingId = addMessage("assistant", "正在思考...", true);
+      const typingId = addMessage("assistant", "", true);
 
       try {
         const res = await fetch("/api/chat", {
@@ -296,6 +564,9 @@
         const bubble = document.getElementById(typingId).querySelector(".bubble");
         bubble.textContent = reply;
         bubble.classList.remove("typing");
+        bubble.classList.remove("msg-content-reveal");
+        void bubble.offsetWidth;
+        bubble.classList.add("msg-content-reveal");
         if (data.reply) {
           messages.push({ role: "assistant", content: reply });
         }
@@ -318,7 +589,7 @@
         '<div class="bubble ' + (isTyping ? "typing" : "") + '"></div>';
       div.querySelector(".bubble").textContent = content;
       list.appendChild(div);
-      list.scrollTop = list.scrollHeight;
+      list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
       return id;
     }
 
@@ -339,6 +610,26 @@
       a.download = "学伴对话_" + new Date().toLocaleDateString() + ".md";
       a.click();
     }
+
+    function clearChat() {
+      messages = [];
+      document.getElementById("messages").innerHTML =
+        '<div class="msg">' +
+          '<div class="avatar">AI</div>' +
+          '<div class="bubble">你好！我是你的python程序设计学习伙伴"学伴"。请选择上方功能模式，告诉我你想学什么吧～</div>' +
+        '</div>';
+    }
+
+    function updateCharCount() {
+      const input = document.getElementById("input");
+      const counter = document.getElementById("charCount");
+      const len = input.value.length;
+      counter.textContent = len;
+      counter.classList.toggle("over-limit", len > 500);
+    }
+
+    document.getElementById("input").addEventListener("input", updateCharCount);
+    updateCharCount();
 
     document.getElementById("input").addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.shiftKey) {
