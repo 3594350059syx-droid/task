@@ -564,7 +564,7 @@
     });
     updateTabIndicator(document.querySelector(".tab.active"));
 
-    // 发送消息
+    // 发送消息（SSE 流式接收）
     async function sendMessage() {
       const input = document.getElementById("input");
       const text = input.value.trim();
@@ -578,6 +578,8 @@
       const sendBtn = document.getElementById("sendBtn");
       sendBtn.disabled = true;
       const typingId = addMessage("assistant", "", true);
+      const bubble = document.getElementById(typingId).querySelector(".bubble");
+      const list = document.getElementById("messages");
 
       try {
         const res = await fetch("/api/chat", {
@@ -589,21 +591,53 @@
             use_knowledge_base: document.getElementById("useKnowledgeBase").checked,
           }),
         });
-        const data = await res.json();
-        const reply = data.reply || ("出错：" + (data.error || "未知错误"));
 
-        const bubble = document.getElementById(typingId).querySelector(".bubble");
-        bubble.textContent = reply;
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || ("HTTP " + res.status));
+        }
+
         bubble.classList.remove("typing");
-        bubble.classList.remove("msg-content-reveal");
-        void bubble.offsetWidth;
-        bubble.classList.add("msg-content-reveal");
-        if (data.reply) {
+        bubble.textContent = "";
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let reply = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+
+          for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith("data:")) continue;
+
+            const payload = line.slice(5).trim();
+            if (!payload) continue;
+
+            const data = JSON.parse(payload);
+            if (data.error) throw new Error(data.error);
+            if (data.content) {
+              reply += data.content;
+              bubble.textContent = reply;
+              list.scrollTop = list.scrollHeight;
+            }
+          }
+        }
+
+        if (reply) {
           messages.push({ role: "assistant", content: reply });
+        } else if (!bubble.textContent) {
+          bubble.textContent = "（未收到回复）";
         }
       } catch (err) {
-        document.getElementById(typingId).querySelector(".bubble").textContent =
-          "❌ 网络错误：" + err.message;
+        bubble.classList.remove("typing");
+        bubble.textContent = "❌ 网络错误：" + err.message;
       } finally {
         sendBtn.disabled = false;
       }

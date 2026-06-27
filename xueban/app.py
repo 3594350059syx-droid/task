@@ -695,6 +695,32 @@ def augment_system_prompt(system_prompt, question, top_k=2):
         return system_prompt
     return system_prompt + "\n\n---\n\n" + reference
 
+
+def sse_event(payload):
+    """格式化为 SSE 数据行"""
+    return "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
+
+
+def build_chat_messages(data):
+    """根据请求体构建发送给大模型的消息列表"""
+    mode = data.get("mode", "explain")
+    user_messages = data.get("messages", [])
+    use_knowledge_base = data.get("use_knowledge_base", True)
+
+    latest_question = ""
+    for msg in reversed(user_messages):
+        if msg.get("role") == "user":
+            latest_question = msg.get("content", "")
+            break
+
+    system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS["explain"])
+    if use_knowledge_base:
+        system_prompt = augment_system_prompt(system_prompt, latest_question)
+
+    full_messages = [{"role": "system", "content": system_prompt}]
+    full_messages.extend(user_messages)
+    return full_messages
+
 # ============ Flask 应用 ============
 app = Flask(__name__, static_folder="static")
 
@@ -714,62 +740,73 @@ def cards(filename):
 @app.route("/api/chat", methods=["POST"])
 def chat():
     """
-    核心接口：接收前端消息，调用大模型 API，一次性返回回复
+    核心接口：接收前端消息，通过 SSE 流式返回大模型回复
     """
     data = request.get_json()
-    mode = data.get("mode", "explain")
-    user_messages = data.get("messages", [])
-    use_knowledge_base = data.get("use_knowledge_base", True)
+    full_messages = build_chat_messages(data)
 
-    # 用最新一条用户消息检索知识库，增强 system prompt
-    latest_question = ""
-    for msg in reversed(user_messages):
-        if msg.get("role") == "user":
-            latest_question = msg.get("content", "")
-            break
+    def generate():
+        try:
+            response = requests.post(
+                API_URL,
+                headers={
+                    "Authorization": "Bearer " + API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": MODEL_NAME,
+                    "messages": full_messages,
+                    "temperature": 0.7,
+                    "stream": True,
+                },
+                stream=True,
+                timeout=100,
+            )
 
-    system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS["explain"])
-    if use_knowledge_base:
-        system_prompt = augment_system_prompt(system_prompt, latest_question)
+            if response.status_code != 200:
+                print("【API 报错详情】:", response.text)
+                yield sse_event({"error": "API 调用失败：" + response.text})
+                return
 
-    # 拼接发送给大模型的完整消息列表
-    full_messages = [{"role": "system", "content": system_prompt}]
-    full_messages.extend(user_messages)
+            for line in response.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data:"):
+                    continue
 
-    try:
-        # 调用智谱 API（注意：关闭了 stream，去掉了流式生成器）
-        response = requests.post(
-            API_URL,
-            headers={
-                "Authorization": "Bearer " + API_KEY,
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": MODEL_NAME,
-                "messages": full_messages,
-                "temperature": 0.7,
-                "stream": False,  # 👈 1. 改为 False，关闭模型流式
-            },
-            timeout=100
-        )
-        response.raise_for_status()
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    yield sse_event({"done": True})
+                    break
 
-        # 👈 2. 直接解析智谱返回的完整 JSON
-        res_json = response.json()
+                try:
+                    chunk = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
 
-        # 👈 3. 提取出大模型真正回复的文本内容
-        reply_text = res_json["choices"][0]["message"]["content"]
+                choices = chunk.get("choices") or []
+                if not choices:
+                    continue
 
-        # 👈 4. 以标准的 JSON 格式吐给前端，对上前端的 `data.reply` 暗号
-        return jsonify({"reply": reply_text})
+                delta = choices[0].get("delta") or {}
+                content = delta.get("content") or ""
+                if content:
+                    yield sse_event({"content": content})
 
-    except requests.exceptions.HTTPError as e:
-        print("【API 报错详情】:", response.text)
-        return jsonify({"error": "API 调用失败：" + str(e)}), 500
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "服务器错误：" + str(e)}), 500
+        except requests.exceptions.RequestException as e:
+            yield sse_event({"error": "API 调用失败：" + str(e)})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yield sse_event({"error": "服务器错误：" + str(e)})
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ============ 启动服务 ============
