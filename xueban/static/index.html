@@ -272,7 +272,28 @@
       border-top: 1px solid #1e293b;
       background: #020617;
       display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-main {
+      display: flex;
       gap: 12px;
+      width: 100%;
+    }
+    .kb-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #94a3b8;
+      cursor: pointer;
+      user-select: none;
+    }
+    .kb-toggle input {
+      width: 14px;
+      height: 14px;
+      accent-color: #3776AB;
+      cursor: pointer;
     }
     .input-wrap {
       flex: 1;
@@ -479,11 +500,17 @@
     </div>
 
     <div class="input-area">
-      <div class="input-wrap">
-        <textarea id="input" rows="2" placeholder="输入问题，按 Enter 发送..."></textarea>
-        <span class="char-count" id="charCount">0</span>
+      <div class="input-main">
+        <div class="input-wrap">
+          <textarea id="input" rows="2" placeholder="输入问题，按 Enter 发送..."></textarea>
+          <span class="char-count" id="charCount">0</span>
+        </div>
+        <button id="sendBtn" onclick="sendMessage()">发送</button>
       </div>
-      <button id="sendBtn" onclick="sendMessage()">发送</button>
+      <label class="kb-toggle">
+        <input type="checkbox" id="useKnowledgeBase" checked />
+        启用本地知识库增强
+      </label>
     </div>
   </div>
 
@@ -556,7 +583,11 @@
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: currentMode, messages: messages }),
+          body: JSON.stringify({
+            mode: currentMode,
+            messages: messages,
+            use_knowledge_base: document.getElementById("useKnowledgeBase").checked,
+          }),
         });
         const data = await res.json();
         const reply = data.reply || ("出错：" + (data.error || "未知错误"));

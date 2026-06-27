@@ -23,6 +23,7 @@ from flask import Flask, request, jsonify, send_from_directory, Response
 import requests
 import json
 import os
+import re
 from dotenv import load_dotenv
 # ============ 配置区（学生需要修改这里）============
 # 加载 .env 文件中的环境变量
@@ -577,6 +578,123 @@ Q2：什么时候必须用列表？
 """,
 }
 
+# ============ 知识库加载 ============
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+KNOWLEDGE_BASE_DIR = os.path.join(BASE_DIR, "knowledge_base")
+
+
+def load_knowledge_base():
+    """读取 knowledge_base/ 下所有 txt，组织为 [{title, content}, ...]"""
+    items = []
+    if not os.path.isdir(KNOWLEDGE_BASE_DIR):
+        return items
+
+    for filename in sorted(os.listdir(KNOWLEDGE_BASE_DIR)):
+        if not filename.endswith(".txt"):
+            continue
+
+        filepath = os.path.join(KNOWLEDGE_BASE_DIR, filename)
+        with open(filepath, "r", encoding="utf-8") as f:
+            text = f.read().strip()
+
+        title = os.path.splitext(filename)[0]
+        if "_" in title and title.split("_", 1)[0].isdigit():
+            title = title.split("_", 1)[1]
+
+        lines = text.splitlines()
+        if lines and lines[0].strip().startswith("标题"):
+            first_line = lines[0].strip()
+            for sep in ("：", ":"):
+                if sep in first_line:
+                    title = first_line.split(sep, 1)[1].strip()
+                    break
+            text = "\n".join(lines[1:]).strip()
+
+        items.append({"title": title, "content": text, "filename": filename})
+
+    return items
+
+
+KNOWLEDGE_BASE = load_knowledge_base()
+
+
+def extract_chinese_keywords(text):
+    """从问题中提取中文关键词（按常见虚词切分，保留长度 >= 2 的词）"""
+    stop_chars = "的是什么怎么如何为什么和与或了呢吗吧把被的在及"
+    keywords = []
+    for segment in re.findall(r"[\u4e00-\u9fff]+", text):
+        for part in re.split("[" + re.escape(stop_chars) + "]", segment):
+            part = part.strip()
+            if len(part) >= 2:
+                keywords.append(part)
+
+    seen = set()
+    unique = []
+    for kw in keywords:
+        if kw not in seen:
+            seen.add(kw)
+            unique.append(kw)
+    return unique
+
+
+def retrieve(question, top_k=2):
+    """
+    根据用户问题中的中文关键词，从知识库检索最相关的 top_k 段内容。
+    统计每个关键词在文档（标题 + 正文）中的出现次数，按总命中数降序返回。
+    """
+    keywords = extract_chinese_keywords(question)
+    if not keywords or not KNOWLEDGE_BASE:
+        return []
+
+    scored = []
+    for item in KNOWLEDGE_BASE:
+        haystack = item["title"] + "\n" + item["content"]
+        score = sum(haystack.count(kw) for kw in keywords)
+        if score > 0:
+            scored.append({
+                "title": item["title"],
+                "content": item["content"],
+                "filename": item["filename"],
+                "score": score,
+            })
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:top_k]
+
+
+def build_reference_prompt(question, top_k=2):
+    """将检索结果格式化为参考资料，供拼入 system prompt"""
+    refs = retrieve(question, top_k=top_k)
+    if not refs:
+        return ""
+
+    parts = [
+        "【参考资料】",
+        "以下是从课程知识库检索到的相关内容。回答时请优先参考并依据这些资料；"
+        "若资料不足以完整回答，可结合通用知识补充，并说明超出资料范围的部分。",
+        "",
+        "【来源标注要求（必须遵守）】",
+        "在完整回答的最后，必须单独另起一行标注实际参考的知识库文件名。",
+        "格式严格为：参考资料：xxx.txt",
+        "若参考了多个文件，用中文顿号连接，例如：参考资料：01_变量与数据类型.txt、04_列表与字典.txt",
+        "只能标注下方资料中给出的文件名，不要编造；未使用任何资料时可不写此行。",
+        "",
+    ]
+    for i, ref in enumerate(refs, 1):
+        parts.append("## 资料{}：{}（文件：{}）".format(i, ref["title"], ref["filename"]))
+        parts.append(ref["content"])
+        parts.append("")
+
+    return "\n".join(parts).strip()
+
+
+def augment_system_prompt(system_prompt, question, top_k=2):
+    """把参考资料追加到 system prompt 末尾"""
+    reference = build_reference_prompt(question, top_k=top_k)
+    if not reference:
+        return system_prompt
+    return system_prompt + "\n\n---\n\n" + reference
+
 # ============ Flask 应用 ============
 app = Flask(__name__, static_folder="static")
 
@@ -601,9 +719,18 @@ def chat():
     data = request.get_json()
     mode = data.get("mode", "explain")
     user_messages = data.get("messages", [])
+    use_knowledge_base = data.get("use_knowledge_base", True)
 
-    # 根据模式选择系统提示词
+    # 用最新一条用户消息检索知识库，增强 system prompt
+    latest_question = ""
+    for msg in reversed(user_messages):
+        if msg.get("role") == "user":
+            latest_question = msg.get("content", "")
+            break
+
     system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS["explain"])
+    if use_knowledge_base:
+        system_prompt = augment_system_prompt(system_prompt, latest_question)
 
     # 拼接发送给大模型的完整消息列表
     full_messages = [{"role": "system", "content": system_prompt}]
@@ -649,6 +776,7 @@ def chat():
 if __name__ == "__main__":
     print("=" * 50)
     print("学伴服务启动成功！")
+    print("已加载知识库条目：{} 条".format(len(KNOWLEDGE_BASE)))
     print("请在浏览器打开：http://127.0.0.1:5050")
     print("按 Ctrl+C 停止服务")
     print("=" * 50)
