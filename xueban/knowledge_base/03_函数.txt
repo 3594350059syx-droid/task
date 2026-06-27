@@ -1,0 +1,67 @@
+标题：Python 函数
+
+一、什么是函数
+函数是把"一段会反复使用的代码"打包起来，给它起一个名字，下次想用时直接调用名字即可。函数的好处是：避免代码重复、提高可读性、方便维护和测试。
+
+二、定义函数
+基本语法：
+    def 函数名(参数1, 参数2, ...):
+        """函数说明（可选）"""
+        函数体
+        return 返回值
+示例：
+    def add(a, b):
+        """计算两个数的和"""
+        return a + b
+
+调用函数：
+    result = add(3, 5)
+    print(result)   # 输出 8
+
+三、参数的几种形式
+1. 位置参数：按顺序传入，例如 add(3, 5)
+2. 关键字参数：按名字传入，例如 add(a=3, b=5)
+3. 默认参数：定义时给参数一个默认值
+       def greet(name, greeting="你好"):
+           print(greeting + "，" + name)
+4. 可变参数 *args：接收任意数量的位置参数，打包成元组
+5. 关键字可变参数 **kwargs：接收任意数量的关键字参数，打包成字典
+
+四、return 语句
+- return 用于返回函数的结果，并立即结束函数执行
+- 一个函数可以没有 return（默认返回 None），也可以返回多个值（实际是返回元组）
+示例：
+    def divmod_custom(a, b):
+        return a // b, a % b
+    q, r = divmod_custom(10, 3)   # q=3, r=1
+
+五、变量作用域
+- 局部变量：在函数内部定义的变量，只能在函数内使用
+- 全局变量：在函数外部定义的变量，函数内部默认只能"读"不能"写"
+- 如果想在函数内修改全局变量，需要用 global 关键字声明
+示例：
+    count = 0
+    def increment():
+        global count
+        count += 1
+
+六、常见易错点
+1. 忘记 return：函数没有 return 时返回 None，调用方拿到 None 会引发后续 bug
+2. 默认参数使用可变对象（如列表）作为默认值会导致"默认值被多次修改"的陷阱：
+       def append_item(item, lst=[]):   # ❌ 危险写法
+           lst.append(item)
+           return lst
+   正确写法是用 None 作为默认值：
+       def append_item(item, lst=None):
+           if lst is None:
+               lst = []
+           lst.append(item)
+           return lst
+3. 函数定义和调用顺序：必须先定义后调用
+4. 参数传递规则：可变对象（列表、字典）在函数内修改会影响外部
+
+七、扩展知识
+- 匿名函数 lambda：lambda x: x*2
+- 函数也是对象，可以作为参数传递、作为返回值
+- 递归函数：函数自己调用自己（如计算阶乘、斐波那契数列）
+- 文档字符串（docstring）：函数定义下方用 """...""" 写说明，可以通过 help(函数名) 查看

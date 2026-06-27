@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>学伴 - 智能学习助手</title>
+  <style>
+    /* ========== 基础样式（学生可自由美化）========== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .app {
+      width: 100%;
+      max-width: 900px;
+      height: 90vh;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 16px 24px;
+      background: #f7f8fc;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 20px; color: #333; }
+    .actions button {
+      padding: 6px 14px;
+      margin-left: 8px;
+      border: 1px solid #667eea;
+      background: #fff;
+      color: #667eea;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .actions button:hover { background: #667eea; color: #fff; }
+    .tabs {
+      display: flex;
+      padding: 12px 24px;
+      gap: 8px;
+      background: #fafbff;
+      border-bottom: 1px solid #eee;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: #667eea;
+      color: #fff;
+      border-color: #667eea;
+    }
+    .messages {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .msg {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 12px;
+    }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #667eea;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .msg.user .avatar { background: #4caf50; }
+    .bubble {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: #f1f3f8;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .msg.user .bubble { background: #667eea; color: #fff; }
+    .typing { color: #999; font-style: italic; }
+    .input-area {
+      padding: 16px 24px;
+      border-top: 1px solid #eee;
+      background: #fafbff;
+      display: flex;
+      gap: 12px;
+    }
+    .input-area textarea {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      resize: none;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    .input-area textarea:focus { border-color: #667eea; }
+    .input-area button {
+      padding: 0 24px;
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .input-area button:disabled { background: #ccc; cursor: not-allowed; }
+    /* 知识卡片视图 */
+    .cards {
+      display: none;
+      padding: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .cards.show { display: grid; }
+    .messages.hide { display: none; }
+    .card {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #f1f3f8;
+    }
+    .card .info { padding: 12px; }
+    .card h3 { font-size: 14px; margin-bottom: 4px; }
+    .card p { font-size: 12px; color: #666; }
+    @media (max-width: 600px) {
+      .app { height: 100vh; border-radius: 0; }
+      .bubble { max-width: 85%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>📚 学伴 - 智能学习助手</h1>
+      <div class="actions">
+        <button onclick="toggleView()">知识卡片</button>
+        <button onclick="exportChat()">导出对话</button>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" data-mode="explain">📖 知识讲解</div>
+      <div class="tab" data-mode="solve">✏️ 习题解答</div>
+      <div class="tab" data-mode="plan">📅 复习计划</div>
+      <div class="tab" data-mode="review">🔍 错题分析</div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="msg">
+        <div class="avatar">AI</div>
+        <div class="bubble">你好！我是你的学习伙伴"学伴"。请选择上方功能模式，告诉我你想学什么吧～</div>
+      </div>
+    </div>
+
+    <!-- 知识卡片视图：学生需将自己生成的图片放入 static/cards/ 目录 -->
+    <div class="cards" id="cards">
+      <div class="card">
+        <img src="/cards/concept1.png" alt="概念1" onerror="this.style.display='none'" />
+        <div class="info"><h3>知识点 1</h3><p>请替换为你的卡片</p></div>
+      </div>
+      <div class="card">
+        <img src="/cards/concept2.png" alt="概念2" onerror="this.style.display='none'" />
+        <div class="info"><h3>知识点 2</h3><p>请替换为你的卡片</p></div>
+      </div>
+      <div class="card">
+        <img src="/cards/concept3.png" alt="概念3" onerror="this.style.display='none'" />
+        <div class="info"><h3>知识点 3</h3><p>请替换为你的卡片</p></div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <textarea id="input" rows="2" placeholder="输入问题，按 Enter 发送..."></textarea>
+      <button id="sendBtn" onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = "explain";
+    let messages = [];
+
+    // 模式切换
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentMode = tab.dataset.mode;
+      });
+    });
+
+    // 发送消息
+    async function sendMessage() {
+      const input = document.getElementById("input");
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage("user", text);
+      messages.push({ role: "user", content: text });
+      input.value = "";
+
+      const sendBtn = document.getElementById("sendBtn");
+      sendBtn.disabled = true;
+      const typingId = addMessage("assistant", "正在思考...", true);
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: currentMode, messages: messages }),
+        });
+        const data = await res.json();
+        const reply = data.reply || ("出错：" + (data.error || "未知错误"));
+
+        const bubble = document.getElementById(typingId).querySelector(".bubble");
+        bubble.textContent = reply;
+        bubble.classList.remove("typing");
+        if (data.reply) {
+          messages.push({ role: "assistant", content: reply });
+        }
+      } catch (err) {
+        document.getElementById(typingId).querySelector(".bubble").textContent =
+          "❌ 网络错误：" + err.message;
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    function addMessage(role, content, isTyping = false) {
+      const list = document.getElementById("messages");
+      const id = "msg-" + Date.now() + Math.random();
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      div.id = id;
+      div.innerHTML =
+        '<div class="avatar">' + (role === "user" ? "我" : "AI") + '</div>' +
+        '<div class="bubble ' + (isTyping ? "typing" : "") + '"></div>';
+      div.querySelector(".bubble").textContent = content;
+      list.appendChild(div);
+      list.scrollTop = list.scrollHeight;
+      return id;
+    }
+
+    function toggleView() {
+      document.getElementById("messages").classList.toggle("hide");
+      document.getElementById("cards").classList.toggle("show");
+    }
+
+    function exportChat() {
+      let md = "# 学伴对话记录\n\n";
+      messages.forEach(m => {
+        md += "**" + (m.role === "user" ? "我" : "学伴") + "**：" + m.content + "\n\n";
+      });
+      const blob = new Blob([md], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "学伴对话_" + new Date().toLocaleDateString() + ".md";
+      a.click();
+    }
+
+    document.getElementById("input").addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

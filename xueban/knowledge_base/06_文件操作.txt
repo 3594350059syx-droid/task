@@ -1,0 +1,78 @@
+标题：Python 文件操作
+
+一、为什么要操作文件
+程序运行时数据保存在内存中，程序结束后就消失了。如果想"持久化保存"数据，就需要把它写入文件；想读取已有的数据，就需要从文件中读取。常见的文件类型有：纯文本（.txt）、CSV 表格（.csv）、JSON 数据（.json）等。
+
+二、打开与关闭文件
+基本写法：
+    f = open("data.txt", "r", encoding="utf-8")
+    内容 = f.read()
+    f.close()
+推荐使用 with 语句，自动关闭文件：
+    with open("data.txt", "r", encoding="utf-8") as f:
+        内容 = f.read()
+with 语句即使在读取过程中发生异常，也能保证文件被正确关闭。
+
+三、文件打开模式
+- "r"：只读（默认），文件不存在会报错
+- "w"：写入，文件不存在会创建，存在会清空原内容
+- "a"：追加，在文件末尾添加内容
+- "x"：独占创建，文件已存在会报错
+- "b"：二进制模式（如 "rb"、"wb"），用于图片、音频等
+- "+"：读写模式（如 "r+"、"w+"）
+
+⚠️ 中文文件必须指定 encoding="utf-8"，否则在 Windows 上经常出现乱码。
+
+四、读取文件的方法
+1. read()：一次读取全部内容，返回字符串
+2. readline()：读取一行
+3. readlines()：读取所有行，返回列表
+4. 直接遍历文件对象（推荐，内存友好）：
+       with open("data.txt", "r", encoding="utf-8") as f:
+           for line in f:
+               print(line.strip())   # strip 去除行末换行符
+
+五、写入文件
+    with open("output.txt", "w", encoding="utf-8") as f:
+        f.write("第一行\n")
+        f.write("第二行\n")
+        f.writelines(["第三行\n", "第四行\n"])
+注意：write() 不会自动加换行符，需要自己加 \n。
+
+六、JSON 文件读写
+JSON 是常见的数据交换格式，Python 内置 json 模块支持它：
+    import json
+    # 写入
+    data = {"name": "小明", "score": 95}
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    # 读取
+    with open("data.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+ensure_ascii=False 让中文正常显示，indent=2 让 JSON 文件格式化更好看。
+
+七、目录与路径
+import os
+- os.getcwd()：获取当前工作目录
+- os.listdir(path)：列出目录内容
+- os.path.exists(path)：判断路径是否存在
+- os.path.join(a, b)：拼接路径（跨平台）
+- os.makedirs(path)：递归创建目录
+
+更现代的方式是使用 pathlib：
+    from pathlib import Path
+    p = Path("data.txt")
+    if p.exists():
+        text = p.read_text(encoding="utf-8")
+
+八、常见易错点
+1. 路径写法：Windows 下 "C:\Users\xxx" 中的 \U 会被当成转义字符，要么用 r"C:\Users\xxx"，要么用 "C:/Users/xxx"
+2. 不指定 encoding 在 Windows 中文系统下读取 UTF-8 文件会乱码
+3. 用 "w" 模式打开会清空原文件，想追加要用 "a"
+4. 忘记关闭文件会导致数据没有真正写入磁盘（用 with 语句可避免）
+5. read() 一次性读入大文件会占用大量内存，应使用按行迭代
+
+九、扩展知识
+- csv 模块：处理 CSV 表格文件
+- pickle 模块：序列化任意 Python 对象到文件
+- 文件锁：多进程操作同一文件时需要加锁避免冲突

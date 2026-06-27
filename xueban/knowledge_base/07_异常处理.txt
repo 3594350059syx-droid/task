@@ -1,0 +1,93 @@
+标题：Python 异常处理
+
+一、什么是异常
+程序运行过程中遇到错误时，Python 会"抛出异常"。如果异常没有被处理，程序就会崩溃并打印一长串错误信息（traceback）。异常处理就是用 try-except 把可能出错的代码"保护起来"，让程序在出错时仍能优雅地继续运行或给出友好提示。
+
+二、常见的内置异常
+- ZeroDivisionError：除数为零
+- ValueError：值类型正确但内容不对（如 int("abc")）
+- TypeError：类型错误（如 "1" + 1）
+- IndexError：列表索引越界
+- KeyError：字典键不存在
+- FileNotFoundError：文件不存在
+- AttributeError：访问的属性不存在
+- ImportError：导入的模块或对象不存在
+- KeyboardInterrupt：用户按 Ctrl+C 中断
+
+三、try-except 基本结构
+    try:
+        可能出错的代码
+    except 异常类型 as e:
+        处理代码
+    else:
+        没出错时执行
+    finally:
+        无论是否出错都会执行
+示例：
+    try:
+        n = int(input("请输入一个数字："))
+        result = 100 / n
+    except ValueError:
+        print("输入的不是数字")
+    except ZeroDivisionError:
+        print("不能除以 0")
+    except Exception as e:
+        print("其他错误：" + str(e))
+    else:
+        print("结果是", result)
+    finally:
+        print("程序结束")
+
+四、捕获多个异常的两种写法
+1. 分别 except：每种异常单独处理（推荐）
+2. 一个 except 捕获多个：
+       except (ValueError, TypeError) as e:
+           ...
+
+五、抛出自定义异常
+使用 raise 语句主动抛出异常：
+    def set_age(age):
+        if age < 0:
+            raise ValueError("年龄不能为负数")
+        return age
+
+也可以定义自己的异常类：
+    class MyError(Exception):
+        pass
+    raise MyError("自定义错误信息")
+
+六、try-finally 的典型用途
+即使中间代码出了错，finally 块也一定会执行，常用于资源清理：
+    f = open("data.txt", "r")
+    try:
+        内容 = f.read()
+        # 处理内容...
+    finally:
+        f.close()
+不过更推荐使用 with 语句来自动管理资源。
+
+七、异常处理的最佳实践
+1. **不要捕获所有异常然后什么都不做**（俗称"吞掉异常"）：
+       try:
+           ...
+       except:
+           pass    # ❌ 这样会让 bug 难以定位
+2. 捕获范围尽量精确：能用 ValueError 就别用 Exception
+3. 在 except 中记录日志或提供用户友好提示，而不是直接 print
+4. 用 raise 重新抛出异常，让上层调用者也知道：
+       try:
+           ...
+       except ValueError:
+           print("发生了值错误")
+           raise
+
+八、常见易错点
+1. 用 except: 不指定类型会捕获所有异常，包括 KeyboardInterrupt，导致 Ctrl+C 都按不停
+2. except 块的缩进错误，导致代码不在 except 内
+3. 在 try 中定义的变量，如果 try 中途出错，except 里访问该变量会再次抛出 NameError
+4. finally 中如果有 return，会覆盖 try 或 except 的 return 值
+
+九、扩展知识
+- 自定义异常应该继承 Exception 而不是 BaseException
+- logging 模块比 print 更适合记录异常
+- assert 语句：用于"调试期"的断言检查，不应作为生产环境的异常处理

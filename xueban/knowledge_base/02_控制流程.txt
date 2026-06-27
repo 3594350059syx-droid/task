@@ -1,0 +1,75 @@
+标题：Python 控制流程
+
+一、什么是控制流程
+程序默认是从上到下逐行执行的。控制流程允许我们根据条件做"分支选择"或"重复执行"，让程序能够处理更复杂的逻辑。Python 中的控制流程主要包括：if 条件语句、while 循环、for 循环。
+
+二、if 条件语句
+基本语法：
+    if 条件:
+        语句块1
+    elif 条件2:
+        语句块2
+    else:
+        语句块3
+注意事项：
+1. 条件后面必须加冒号 :
+2. 语句块需要严格缩进（推荐 4 个空格），缩进表示"属于这个分支"
+3. elif 和 else 是可选的，可以只写 if
+示例：
+    score = 85
+    if score >= 90:
+        print("优秀")
+    elif score >= 60:
+        print("及格")
+    else:
+        print("不及格")
+
+三、while 循环
+基本语法：
+    while 条件:
+        循环体
+当条件为 True 时反复执行循环体，直到条件变为 False。
+示例：
+    i = 1
+    while i <= 5:
+        print(i)
+        i += 1
+注意：必须在循环体内部修改条件相关的变量，否则会陷入死循环。
+
+四、for 循环
+for 循环用于"遍历一个序列"，例如列表、字符串、range 对象等。
+基本语法：
+    for 变量 in 可迭代对象:
+        循环体
+常见用法：
+    for i in range(5):           # 0,1,2,3,4
+        print(i)
+    for ch in "hello":           # 遍历字符串的每个字符
+        print(ch)
+    for x in [10, 20, 30]:       # 遍历列表
+        print(x)
+
+range() 函数：
+- range(n)：生成 0 到 n-1
+- range(a, b)：生成 a 到 b-1
+- range(a, b, step)：以 step 为步长生成 a 到 b-1
+
+五、break 与 continue
+- break：立即跳出当前循环
+- continue：跳过本次循环，进入下一次
+示例：找出第一个能被 7 整除的数
+    for i in range(1, 100):
+        if i % 7 == 0:
+            print(i)
+            break
+
+六、常见易错点
+1. 忘记冒号：if x > 0 后面必须有 :
+2. 缩进不一致：同一个语句块的缩进必须完全相同
+3. 死循环：while 条件中的变量没有被更新
+4. 用 = 代替 == 进行判断
+5. 在 for 循环里修改正在遍历的列表，会导致不可预期的行为
+
+七、扩展知识
+- Python 的 if 没有 switch-case，但 3.10+ 引入了 match-case 模式匹配
+- 列表推导式可以替代很多简单的 for 循环：[x*2 for x in range(10)]

@@ -1,0 +1,90 @@
+标题：Python 面向对象基础
+
+一、什么是面向对象
+面向对象编程（OOP）是一种把"数据"和"操作数据的函数"打包在一起的编程方式。被打包的整体叫做"对象"，对象的"模板"叫做"类"。相比纯函数式的面条代码，面向对象更适合描述现实世界中的事物。
+
+举例：把"学生"看成一个对象，那么他有姓名、年龄、成绩这些属性，也有"学习"、"考试"这些行为。
+
+二、定义类
+基本语法：
+    class 类名:
+        def __init__(self, 参数):
+            self.属性名 = 参数
+        def 方法名(self, 参数):
+            方法体
+示例：
+    class Student:
+        def __init__(self, name, age):
+            self.name = name
+            self.age = age
+        def introduce(self):
+            print(f"我叫{self.name}，今年{self.age}岁")
+
+创建对象（实例化）：
+    s = Student("小明", 18)
+    s.introduce()    # 我叫小明，今年18岁
+
+三、关键概念
+1. 类（class）：一个模板/蓝图，定义了对象有什么属性和方法
+2. 对象/实例（instance）：根据类创建出来的具体个体
+3. 属性（attribute）：对象的数据，例如 s.name
+4. 方法（method）：对象能执行的函数，第一个参数固定是 self
+5. self：指代"当前对象自己"，调用方法时不用传，Python 自动帮你填
+
+四、__init__ 构造方法
+__init__ 是一个特殊方法，在创建对象时自动被调用，用来初始化对象的属性。它前后各有两个下划线，称为"魔法方法"或"dunder 方法"。
+
+五、继承
+一个类可以"继承"另一个类，自动获得父类的所有属性和方法，还可以添加自己的内容。
+    class Animal:
+        def __init__(self, name):
+            self.name = name
+        def eat(self):
+            print(self.name + " 在吃东西")
+
+    class Dog(Animal):       # Dog 继承自 Animal
+        def bark(self):
+            print(self.name + " 汪汪叫")
+
+    d = Dog("旺财")
+    d.eat()    # 继承自父类
+    d.bark()   # 自己的方法
+
+六、方法重写（override）
+子类可以重新定义父类的方法：
+    class Cat(Animal):
+        def eat(self):
+            print(self.name + " 优雅地吃鱼")
+
+七、私有属性
+Python 没有真正的"私有"，但约定俗成：
+- 单下划线开头 _name：表示"内部使用，不建议外部访问"
+- 双下划线开头 __name：会被名称改写（name mangling），更难从外部直接访问
+
+八、常见的魔法方法
+- __init__：初始化
+- __str__：用 print 打印对象时调用，应该返回字符串
+- __repr__：开发者友好的字符串表示
+- __len__：让对象支持 len()
+- __eq__：定义两个对象如何判断相等
+
+示例：
+    class Point:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+        def __str__(self):
+            return f"Point({self.x}, {self.y})"
+
+九、常见易错点
+1. 忘记写 self：定义方法时必须把 self 作为第一个参数
+2. 在方法内访问属性时忘记加 self.：直接写 name 会被当成局部变量
+3. 类属性 vs 实例属性：在类体中直接定义的变量是"所有实例共享的类属性"，初始化时如果赋的是可变对象（如列表），会出现"所有实例共享同一个列表"的陷阱
+4. __init__ 不是构造函数本身，真正创建对象的是 __new__；__init__ 只是初始化
+5. 继承时如果子类也定义了 __init__，需要用 super().__init__() 调用父类初始化
+
+十、扩展知识
+- 多重继承：Python 允许一个类同时继承多个父类
+- 抽象类：通过 abc 模块定义不能直接实例化的"抽象基类"
+- 类方法 @classmethod 和静态方法 @staticmethod
+- 属性装饰器 @property：让方法像属性一样访问
